@@ -1,5 +1,5 @@
 describe('Component binding', function() {
-  var scope, element, component, componentRoot, view
+  var scope, element, component, componentRoot
 
   beforeEach(function() {
     element = document.createElement('div');
