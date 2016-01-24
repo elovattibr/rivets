@@ -215,6 +215,23 @@ class Rivets.ComponentBinding extends Rivets.Binding
 
     result
 
+  # Returns the object of required components
+  deps: =>
+    requires = @component.requires
+    return unless requires?
+    requires = [requires] if typeof requires is 'string'
+    dependencies = {}
+    dependencies[name] = @lookupDependency(name) for name in requires
+    dependencies
+
+  lookupDependency: (name) =>
+    depName = "#{name}Component"
+    currentElement = @el
+    currentElement = currentElement.parentNode while currentElement && !Rivets.Util.domData(currentElement, depName)
+    component = Rivets.Util.domData(currentElement, depName) if currentElement?
+    throw new Error("Unmet dependency: #{name}") unless component?
+    component
+
   # Returns a camel-cased version of the string. Used when translating an
   # element's attribute name into a property name for the component's scope.
   camelCase: (string) ->
@@ -235,9 +252,10 @@ class Rivets.ComponentBinding extends Rivets.Binding
     if @componentView?
       @componentView.bind()
     else
-      @renderTemplate() if @component.template
-      scope = @component.initialize.call @, @el, @locals()
-      @el._bound = true
+      scope = @component.initialize.call @, @el, @locals(), @deps()
+      @renderTemplate(scope) if @component.template
+      Rivets.Util.domData(@el, 'isBound', true)
+      Rivets.Util.domData(@el, "#{@type}Component", scope)
 
       options = {}
 
@@ -258,9 +276,9 @@ class Rivets.ComponentBinding extends Rivets.Binding
         ).call(@, key, observer)
 
   # Render component template despite of whether it's string or DOM node
-  renderTemplate: =>
+  renderTemplate: (scope) =>
     if typeof @component.template is "function"
-      template = @component.template.call @
+      template = @component.template.call @, scope
     else
       template = @component.template
 
@@ -278,6 +296,7 @@ class Rivets.ComponentBinding extends Rivets.Binding
     for key, observer of @observers
       observer.unobserve()
 
+    Rivets.Util.cleanNode(@el)
     @componentView?.unbind.call @
 
 # Rivets.TextBinding

@@ -1,5 +1,5 @@
 describe('Component binding', function() {
-  var scope, element, component, componentRoot
+  var scope, element, component, componentRoot, view
 
   beforeEach(function() {
     element = document.createElement('div');
@@ -48,9 +48,41 @@ describe('Component binding', function() {
 
       component.initialize.calledWith(componentRoot, { item: locals.object, type: type }).should.be.true
     })
+
+    describe('when "requires" option is specified for component', function() {
+      var anotherScope, anotherComponent
+
+      beforeEach(function() {
+        componentRoot.innerHTML = '<another></another>'
+        anotherScope = {}
+        anotherComponent = rivets.components.another = {
+          requires: 'test',
+          initialize: sinon.stub().returns(anotherScope)
+        }
+      })
+
+      it('receives dependencies as third argument', function() {
+        rivets.bind(element)
+
+        anotherComponent.initialize.getCall(0).args[2].should.eql({ test: scope })
+      })
+
+      it('throws exception if cannot find specified dependency', function() {
+        anotherComponent.requires = 'test2'
+
+        rivets.bind.bind(null, element).should.throw(Error)
+      })
+    })
   })
 
   describe('when "template" is a function', function() {
+    it('receives view scope as first argument', function() {
+      component.template = sinon.spy()
+      rivets.bind(element)
+
+      component.template.calledWith(scope).should.be.true
+    })
+
     it('renders returned string as component template', function() {
       component.template = sinon.stub().returns('<h1>{ name }</h1>')
       rivets.bind(element)
@@ -70,5 +102,4 @@ describe('Component binding', function() {
       componentRoot.innerHTML.should.equal('<h1>' + scope.name + '</h1>')
     })
   })
-
 })

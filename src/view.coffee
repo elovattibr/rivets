@@ -106,7 +106,7 @@ class Rivets.View
     unless block
       type = node.nodeName.toLowerCase()
 
-      if @components[type] and not node._bound
+      if @components[type] and not Rivets.Util.domData(node, 'isBound')
         @bindings.push new Rivets.ComponentBinding @, node, type
         block = true
 
