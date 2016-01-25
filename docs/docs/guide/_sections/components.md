@@ -81,6 +81,49 @@ rivets.components.tab = {
 }
 ```
 
+Components transclusion is something that helps to extend components' templates. In order to use transclusion it's required to specify `transclude: boolean | object` option on the component.
+
+```js
+rivets.components.pane = {
+  transclude: true,
+
+  template: `
+    <div class="panel">
+      <div rv-transclude="title" class="panel-heading">{ title }</div>
+      <div rv-transclude="body" class="panel-body">{ body }</div>
+    </div>
+  `
+
+  ...
+}
+```
+
+Then lets specify custom heading for our `pane` component:
+
+```html
+<pane>
+  <h3 block-name="title"><i class="glyphicon-ok"></i> { title }</h3>
+</pane>
+```
+
+It's also possible to define custom CSS selectors for template's blocks. For this, just specify `translude` option as object:
+```js
+rivets.components.pane = {
+  transclude: {
+    title: 'pane-title' // supports any CSS selector
+  }
+
+  ...
+}
+```
+
+```html
+<pane>
+  <pane-title><i class="glyphicon-ok"></i> { title }</pane-title>
+</pane>
+
+```
+
 Components can also be initialized on their own, outside of a template. This is useful when you want to insert a new view into the DOM yourself, such as the entry point to your entire application or the content of a modal. The API is similar to `rivets.bind`, except that instead of passing it an actual template / element, you just pass it the name of the component and the root element you want the component to render in.
 
 ```
