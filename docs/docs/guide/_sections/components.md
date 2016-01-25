@@ -41,6 +41,46 @@ rivets.components['todo-item'] = {
 <todo-item item="myItem" list-style="condensed"></todo-item>
 ```
 
+By the way `template` method accepts created (inside `initialize` method) controller, so then it's possible to decide which template to use depends on specified attributes.
+
+```js
+rivets.components['form-field'] = {
+  static: ['type'],
+
+  template: function(formField) {
+    return JST['form-fields/' + formField.type]
+  },
+
+  initialize: function(el, data) {
+    return new FormField(data)
+  }
+}
+```
+
+And use it like this:
+
+```html
+<form-field type="number" value="user.age"></form-field>
+
+<form-field type="date-picker" value="user.createdAt"></form-field>
+```
+
+Further more, it's possible to create dependent components as `tabset`. In order to include parent component, just specify its name inside `requires` option of the component and it will be accessible in third argument of component's `initialize` method (in order to include few different parent components pass an array to `requires` option). If dependency is not found, exception will be thrown
+
+```js
+rivets.components.tab = {
+  requires: 'tabset',
+
+  initialize: function(el, attributes, dependencies) {
+    var tab = new Tab(attributes)
+
+    dependencies.tabset.addTab(tab)
+
+    return tab;
+  }
+}
+```
+
 Components can also be initialized on their own, outside of a template. This is useful when you want to insert a new view into the DOM yourself, such as the entry point to your entire application or the content of a modal. The API is similar to `rivets.bind`, except that instead of passing it an actual template / element, you just pass it the name of the component and the root element you want the component to render in.
 
 ```
