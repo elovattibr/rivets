@@ -274,8 +274,8 @@ Rivets.public.binders.transclude =
           break
 
     if part
-      @partView = Rivets.public.bind(part, @view.models)
       binder.injectPart(part, el)
+      @partView = Rivets.public.bind(Array.prototype.slice.call(el.childNodes, 0), @view.models)
 
   unbind: ->
     @partView?.unbind()
