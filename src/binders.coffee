@@ -249,7 +249,14 @@ Rivets.public.binders['*'] = (el, value) ->
     el.removeAttribute @type
 
 Rivets.public.binders.transclude =
+  blockNameAttribute: 'block-name'
+
+  injectPart: (partElement, existingElement) ->
+    existingElement.removeChild(existingElement.firstChild) while existingElement.firstChild
+    existingElement.appendChild(partElement)
+
   bind: (el, value) ->
+    binder = Rivets.public.binders.transclude
     componentBinbing = @view.models.component
     throw new Error('Unable to transclude content because used outside component.') unless componentBinbing
 
@@ -260,7 +267,7 @@ Rivets.public.binders.transclude =
     unless partName
       part = content
     else
-      selector = componentBinbing.component.transclude[partName] or "[block-name=#{partName}], [data-block-name=#{partName}]"
+      selector = componentBinbing.component.transclude[partName] or "[#{binder.blockNameAttribute}=#{partName}]"
       for child in content.children or content.childNodes
         if Rivets.Util.isElementMatch(child, selector)
           part = child
@@ -268,7 +275,7 @@ Rivets.public.binders.transclude =
 
     if part
       @partView = Rivets.public.bind(part, @view.models)
-      el.parentNode.replaceChild(part, el)
+      binder.injectPart(part, el)
 
   unbind: ->
     @partView?.unbind()

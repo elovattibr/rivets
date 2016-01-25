@@ -106,6 +106,12 @@ Then lets specify custom heading for our `pane` component:
 </pane>
 ```
 
+It's possible to overwrite default block name attribute (i.e. `block-name`):
+
+```js
+  rivets.binders.transclude.blockNameAttribute = 'data-block'
+```
+
 It's also possible to define custom CSS selectors for template's blocks. For this, just specify `translude` option as object:
 ```js
 rivets.components.pane = {
@@ -121,8 +127,16 @@ rivets.components.pane = {
 <pane>
   <pane-title><i class="glyphicon-ok"></i> { title }</pane-title>
 </pane>
-
 ```
+
+By default, specified block will replace all the children of existing one but this behavior can be customized by rewriting `rivets.binders.transclude.injectPart` method. For example, lets replace the whole part
+
+```js
+rivets.binders.transclude.injectPart = function(partElement, existingElement) {
+  existingElement.parentNode.replaceChild(partElement, existingElement)
+}
+```
+
 
 Components can also be initialized on their own, outside of a template. This is useful when you want to insert a new view into the DOM yourself, such as the entry point to your entire application or the content of a modal. The API is similar to `rivets.bind`, except that instead of passing it an actual template / element, you just pass it the name of the component and the root element you want the component to render in.
 
