@@ -43,3 +43,13 @@ else
     cleanNode: (el) ->
       elementId = el[domData.idKey]
       delete domData.store[elementId]
+
+Rivets.Util.isElementMatch = do () ->
+  element = document.createElement('div')
+
+  if typeof element.matches is 'function'
+    (el, selector) -> el.matches(selector)
+  else if typeof element.msMatchesSelector is 'function'
+    (el, selector) -> el.msMatchesSelector(selector)
+  else
+    (el, selector) -> el.webkitMatchesSelector(selector)

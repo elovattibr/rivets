@@ -253,10 +253,12 @@ class Rivets.ComponentBinding extends Rivets.Binding
       @componentView.bind()
     else
       scope = @component.initialize.call @, @el, @locals(), @deps()
-      @renderTemplate(scope) if @component.template
+      if @component.template
+        scope.component = @
+        @renderTemplate(scope)
+
       Rivets.Util.domData(@el, 'isBound', true)
       Rivets.Util.domData(@el, "#{@type}Component", scope)
-
       options = {}
 
       for option in Rivets.extensions
@@ -269,6 +271,7 @@ class Rivets.ComponentBinding extends Rivets.Binding
 
       @componentView = new Rivets.View(@el, scope, options)
       @componentView.bind()
+      Rivets.Util.domData(@el, 'originalContent', null) if Rivets.Util.domData(@el, 'originalContent')
 
       for key, observer of @observers
         @upstreamObservers[key] = @observe @componentView.models, key, ((key, observer) => =>
@@ -282,11 +285,20 @@ class Rivets.ComponentBinding extends Rivets.Binding
     else
       template = @component.template
 
+    if @component.transclude and @el.childNodes.length > 0
+      Rivets.Util.domData(@el, 'originalContent', @contentFragment())
+
     if template and typeof template.appendChild is "function"
       @el.removeChild(@el.firstChild) while @el.firstChild
       @el.appendChild(template)
     else
       @el.innerHTML = template
+
+  contentFragment: =>
+    clone = @el.cloneNode(true)
+    fragment = document.createDocumentFragment()
+    fragment.appendChild(clone.firstChild) while(clone.firstChild)
+    fragment
 
   # Intercept `Rivets.Binding::unbind` to be called on `@componentView`.
   unbind: =>

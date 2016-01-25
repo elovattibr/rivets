@@ -102,4 +102,91 @@ describe('Component binding', function() {
       componentRoot.innerHTML.should.equal('<h1>' + scope.name + '</h1>')
     })
   })
+
+  describe('when "transclude" option equals "true"', function() {
+    beforeEach(function() {
+      component.transclude = true
+      component.template = '<label>Field</label>: <span rv-transclude>Value</span>'
+      componentRoot.innerHTML = '<b rv-text="title"></b>'
+      scope.title = 'Rivets transclusion!'
+    })
+
+    it('replaces "rv-transclude" element with content of the component', function() {
+      rivets.bind(element)
+
+      componentRoot.querySelector('b[rv-text]').should.exist
+      Boolean(componentRoot.querySelector('span[rv-transclude]')).should.be.false
+    })
+
+    it('leaves "rv-transclude" element as it is if no content is provided for the component', function() {
+      componentRoot.innerHTML = ''
+      rivets.bind(element)
+
+      componentRoot.querySelector('span[rv-transclude]').should.exist
+    })
+
+    it('assignes view scope of the component to transcluded part', function() {
+      rivets.bind(element)
+
+      componentRoot.querySelector('b[rv-text]').innerHTML.should.equal(scope.title)
+    })
+
+    it('processes bindings of trunscluded part', function() {
+      rivets.bind(element)
+      scope.title = 'test me'
+
+      componentRoot.querySelector('b[rv-text]').innerHTML.should.equal(scope.title)
+    })
+
+    it('clears transclusion part when component is cleared', function() {
+      var view = rivets.bind(element)
+      var originalTitle = scope.title
+
+      view.unbind()
+      scope.title = 'new value'
+
+      componentRoot.querySelector('b[rv-text]').innerHTML.should.equal(originalTitle)
+    })
+  })
+
+  describe('multiple trunsclusion', function() {
+    beforeEach(function() {
+      component.transclude = true
+      component.template = '<label rv-transclude="label">Field</label>: <span rv-transclude="value">Value</span>'
+      scope.value = 'Rivets multiple transclusion!'
+      scope.label = 'Greeting'
+    })
+
+    it('does not replace parts if content of component does not contain blocks', function() {
+      componentRoot.innerHTML = '<strong>nothing</strong>'
+      rivets.bind(element)
+
+      componentRoot.innerHTML.should.equal(component.template)
+    })
+
+    it('replaces only specified part of component template', function() {
+      componentRoot.innerHTML = '<b block-name="label">{ label }</b>'
+      rivets.bind(element)
+      var compiledTemplate = component.template.replace('<label rv-transclude="label">Field</label>', '<b block-name="label">' + scope.label + '</b>')
+
+      componentRoot.innerHTML.should.equal(compiledTemplate)
+    })
+
+    it('looks for blocks only inside direct children', function() {
+      componentRoot.innerHTML = '<b block-name="value">{ value }</b><another-one><b block-name="label">{ label }</b></another-one>'
+      rivets.bind(element)
+      var compiledTemplate = component.template.replace('<span rv-transclude="value">Value</span>', '<b block-name="value">' + scope.value + '</b>')
+
+      componentRoot.innerHTML.should.equal(compiledTemplate)
+    })
+
+    it('searches block by specified alias in "transclusion" option', function() {
+      component.transclude = { value: 'value' }
+      componentRoot.innerHTML = '<value>{ value }</value>'
+      rivets.bind(element)
+      var compiledTemplate = component.template.replace('<span rv-transclude="value">Value</span>', '<value>' + scope.value + '</value>')
+
+      componentRoot.innerHTML.should.equal(compiledTemplate)
+    })
+  })
 })
