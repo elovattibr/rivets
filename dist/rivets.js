@@ -1,9 +1,9 @@
 // Rivets.js
-// version: 0.8.1
+// version: 1.0.0
 // author: Michael Richards
 // license: MIT
 (function() {
-  var Rivets, bindMethod, unbindMethod, _ref,
+  var Rivets, bindMethod, domData, unbindMethod, _ref,
     __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
     __slice = [].slice,
     __hasProp = {}.hasOwnProperty,
@@ -11,7 +11,7 @@
     __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
   Rivets = {
-    options: ['prefix', 'templateDelimiters', 'rootInterface', 'preloadData', 'handler'],
+    options: ['prefix', 'boundAttrSuffix', 'templateDelimiters', 'rootInterface', 'preloadData', 'handler'],
     extensions: ['binders', 'formatters', 'components', 'adapters'],
     "public": {
       binders: {},
@@ -19,6 +19,7 @@
       formatters: {},
       adapters: {},
       prefix: 'rv',
+      boundAttrSuffix: '.bind',
       templateDelimiters: ['{', '}'],
       rootInterface: '.',
       preloadData: true,
@@ -54,20 +55,16 @@
         view.bind();
         return view;
       },
-      init: function(component, el, data) {
-        var scope, view;
-        if (data == null) {
-          data = {};
+      init: function(component, el, attributes) {
+        if (attributes == null) {
+          attributes = {};
         }
         if (el == null) {
           el = document.createElement('div');
         }
-        component = Rivets["public"].components[component];
-        el.innerHTML = component.template.call(this, el);
-        scope = component.initialize.call(this, el, data);
-        view = new Rivets.View(el, scope);
-        view.bind();
-        return view;
+        return Rivets.ComponentBinding.from(el, attributes, {
+          type: component
+        });
       }
     }
   };
@@ -89,9 +86,22 @@
         } else {
           return $el.val();
         }
-      }
+      },
+      domData: jQuery.data,
+      cleaNode: jQuery.removeData
     };
   } else {
+    domData = (function() {
+      var count, prefix, _ref1;
+      _ref1 = [0, '__rivets' + new Date().getTime()], count = _ref1[0], prefix = _ref1[1];
+      return {
+        store: {},
+        idKey: prefix,
+        generateId: function() {
+          return ++count;
+        }
+      };
+    })();
     Rivets.Util = {
       bindEvent: (function() {
         if ('addEventListener' in window) {
@@ -129,9 +139,42 @@
         } else {
           return el.value;
         }
+      },
+      domData: function(el, key, value) {
+        var elementId, store;
+        elementId = el[domData.idKey] = el[domData.idKey] || domData.generateId();
+        store = domData.store[elementId] || {};
+        if (typeof value === 'undefined') {
+          return store[key];
+        }
+        domData.store[elementId] = store;
+        return store[key] = value;
+      },
+      cleanNode: function(el) {
+        var elementId;
+        elementId = el[domData.idKey];
+        return delete domData.store[elementId];
       }
     };
   }
+
+  Rivets.Util.isElementMatch = (function() {
+    var element;
+    element = document.createElement('div');
+    if (typeof element.matches === 'function') {
+      return function(el, selector) {
+        return el.matches(selector);
+      };
+    } else if (typeof element.msMatchesSelector === 'function') {
+      return function(el, selector) {
+        return el.msMatchesSelector(selector);
+      };
+    } else {
+      return function(el, selector) {
+        return el.webkitMatchesSelector(selector);
+      };
+    }
+  })();
 
   Rivets.TypeParser = (function() {
     function TypeParser() {}
@@ -433,7 +476,7 @@
       }
       if (!block) {
         type = node.nodeName.toLowerCase();
-        if (this.components[type] && !node._bound) {
+        if (this.components[type] && !Rivets.Util.domData(node, 'isBound')) {
           this.bindings.push(new Rivets.ComponentBinding(this, node, type));
           block = true;
         }
@@ -749,32 +792,78 @@
   Rivets.ComponentBinding = (function(_super) {
     __extends(ComponentBinding, _super);
 
+    ComponentBinding.from = function(el, attributes, options) {
+      var component, type;
+      if (attributes == null) {
+        attributes = {};
+      }
+      if (options == null) {
+        options = {};
+      }
+      type = options.type || el.nodeName.toLowerCase();
+      component = new Rivets.ComponentBinding(Rivets["public"], el, type);
+      component.locals = function() {
+        return attributes;
+      };
+      component.bind();
+      return component;
+    };
+
     function ComponentBinding(view, el, type) {
-      var attribute, bindingRegExp, propertyName, _i, _len, _ref1, _ref2;
       this.view = view;
       this.el = el;
       this.type = type;
       this.unbind = __bind(this.unbind, this);
+      this.createViewFor = __bind(this.createViewFor, this);
+      this.contentFragment = __bind(this.contentFragment, this);
+      this.renderTemplate = __bind(this.renderTemplate, this);
       this.bind = __bind(this.bind, this);
+      this.lookupDependency = __bind(this.lookupDependency, this);
+      this.deps = __bind(this.deps, this);
       this.locals = __bind(this.locals, this);
       this.component = this.view.components[this.type];
       this["static"] = {};
       this.observers = {};
       this.upstreamObservers = {};
-      bindingRegExp = view.bindingRegExp();
+      if (this.view !== Rivets["public"]) {
+        this.parseAttributes();
+      }
+    }
+
+    ComponentBinding.prototype.parseAttributes = function() {
+      var attribute, bindingRegExp, isBoundAttr, propertyName, _i, _len, _ref1, _results;
+      bindingRegExp = this.view.bindingRegExp();
       _ref1 = this.el.attributes || [];
+      _results = [];
       for (_i = 0, _len = _ref1.length; _i < _len; _i++) {
         attribute = _ref1[_i];
         if (!bindingRegExp.test(attribute.name)) {
-          propertyName = this.camelCase(attribute.name);
-          if (__indexOf.call((_ref2 = this.component["static"]) != null ? _ref2 : [], propertyName) >= 0) {
-            this["static"][propertyName] = attribute.value;
-          } else {
-            this.observers[propertyName] = attribute.value;
+          propertyName = attribute.name;
+          isBoundAttr = this.isAttrBound(propertyName);
+          if (isBoundAttr) {
+            propertyName = propertyName.slice(0, -this.view.boundAttrSuffix.length);
           }
+          propertyName = this.camelCase(propertyName);
+          if (isBoundAttr) {
+            _results.push(this.observers[propertyName] = attribute.value);
+          } else {
+            _results.push(this["static"][propertyName] = attribute.value);
+          }
+        } else {
+          _results.push(void 0);
         }
       }
-    }
+      return _results;
+    };
+
+    ComponentBinding.prototype.isAttrBound = function(name) {
+      var position;
+      position = name.indexOf(this.view.boundAttrSuffix);
+      if (position === -1) {
+        return false;
+      }
+      return name.indexOf(this.view.boundAttrSuffix) === name.length - this.view.boundAttrSuffix.length;
+    };
 
     ComponentBinding.prototype.sync = function() {};
 
@@ -798,6 +887,39 @@
       return result;
     };
 
+    ComponentBinding.prototype.deps = function() {
+      var dependencies, name, requires, _i, _len;
+      requires = this.component.requires;
+      if (requires == null) {
+        return;
+      }
+      if (typeof requires === 'string') {
+        requires = [requires];
+      }
+      dependencies = {};
+      for (_i = 0, _len = requires.length; _i < _len; _i++) {
+        name = requires[_i];
+        dependencies[name] = this.lookupDependency(name);
+      }
+      return dependencies;
+    };
+
+    ComponentBinding.prototype.lookupDependency = function(name) {
+      var component, currentElement, depName;
+      depName = "" + name + "Component";
+      currentElement = this.el;
+      while (currentElement && !Rivets.Util.domData(currentElement, depName)) {
+        currentElement = currentElement.parentNode;
+      }
+      if (currentElement != null) {
+        component = Rivets.Util.domData(currentElement, depName);
+      }
+      if (component == null) {
+        throw new Error("Unmet dependency: " + name);
+      }
+      return component;
+    };
+
     ComponentBinding.prototype.camelCase = function(string) {
       return string.replace(/-([a-z])/g, function(grouped) {
         return grouped[1].toUpperCase();
@@ -805,7 +927,7 @@
     };
 
     ComponentBinding.prototype.bind = function() {
-      var k, key, keypath, observer, option, options, scope, v, _base, _i, _j, _len, _len1, _ref1, _ref2, _ref3, _ref4, _ref5, _ref6, _ref7, _results;
+      var ctrl, k, key, keypath, observer, option, options, v, _base, _i, _j, _len, _len1, _ref1, _ref2, _ref3, _ref4, _ref5, _ref6, _ref7, _results;
       if (!this.bound) {
         _ref1 = this.observers;
         for (key in _ref1) {
@@ -823,9 +945,15 @@
       if (this.componentView != null) {
         return this.componentView.bind();
       } else {
-        this.el.innerHTML = this.component.template.call(this);
-        scope = this.component.initialize.call(this, this.el, this.locals());
-        this.el._bound = true;
+        ctrl = this.component.initialize.call(this, this.el, this.locals(), this.deps());
+        if (this.component.template) {
+          this.renderTemplate(ctrl);
+        }
+        if (typeof this.component.bind === 'function') {
+          this.component.bind.call(this, this.el, ctrl);
+        }
+        Rivets.Util.domData(this.el, 'isBound', true);
+        Rivets.Util.domData(this.el, "" + this.type + "Component", ctrl);
         options = {};
         _ref2 = Rivets.extensions;
         for (_i = 0, _len = _ref2.length; _i < _len; _i++) {
@@ -851,8 +979,11 @@
           option = _ref5[_j];
           options[option] = (_ref6 = this.component[option]) != null ? _ref6 : this.view[option];
         }
-        this.componentView = new Rivets.View(this.el, scope, options);
+        this.componentView = new Rivets.View(this.el, this.createViewFor(ctrl), options);
         this.componentView.bind();
+        if (Rivets.Util.domData(this.el, 'originalContent')) {
+          Rivets.Util.domData(this.el, 'originalContent', null);
+        }
         _ref7 = this.observers;
         _results = [];
         for (key in _ref7) {
@@ -869,6 +1000,44 @@
       }
     };
 
+    ComponentBinding.prototype.renderTemplate = function(ctrl) {
+      var template;
+      if (typeof this.component.template === 'function') {
+        template = this.component.template.call(this, ctrl);
+      } else {
+        template = this.component.template;
+      }
+      if (this.component.transclude && this.el.childNodes.length > 0) {
+        Rivets.Util.domData(this.el, 'originalContent', this.contentFragment());
+      }
+      if (template && typeof template.appendChild === "function") {
+        while (this.el.firstChild) {
+          this.el.removeChild(this.el.firstChild);
+        }
+        return this.el.appendChild(template);
+      } else {
+        return this.el.innerHTML = template;
+      }
+    };
+
+    ComponentBinding.prototype.contentFragment = function() {
+      var clone, fragment;
+      clone = this.el.cloneNode(true);
+      fragment = document.createDocumentFragment();
+      while (clone.firstChild) {
+        fragment.appendChild(clone.firstChild);
+      }
+      return fragment;
+    };
+
+    ComponentBinding.prototype.createViewFor = function(ctrl) {
+      var viewScope;
+      viewScope = Object.create(this.view.models);
+      viewScope.component = this;
+      viewScope[this.component.as || this.camelCase(this.type)] = ctrl;
+      return viewScope;
+    };
+
     ComponentBinding.prototype.unbind = function() {
       var key, observer, _ref1, _ref2, _ref3;
       _ref1 = this.upstreamObservers;
@@ -881,6 +1050,7 @@
         observer = _ref2[key];
         observer.unobserve();
       }
+      Rivets.Util.cleanNode(this.el);
       return (_ref3 = this.componentView) != null ? _ref3.unbind.call(this) : void 0;
     };
 
@@ -1043,15 +1213,10 @@
       return (_ref1 = this.nested) != null ? _ref1.unbind() : void 0;
     },
     routine: function(el, value) {
-      var key, model, models, _ref1;
+      var models;
       if (!!value === !this.bound) {
         if (value) {
-          models = {};
-          _ref1 = this.view.models;
-          for (key in _ref1) {
-            model = _ref1[key];
-            models[key] = model;
-          }
+          models = Object.create(this.view.models);
           (this.nested || (this.nested = new Rivets.View(el, models, this.view.options()))).bind();
           this.marker.parentNode.insertBefore(el, this.marker.nextSibling);
           return this.bound = true;
@@ -1134,7 +1299,7 @@
       }
     },
     routine: function(el, collection) {
-      var binding, data, i, index, key, model, modelName, options, previous, template, view, _i, _j, _k, _len, _len1, _len2, _ref1, _ref2, _ref3, _results;
+      var binding, data, i, index, model, modelName, options, previous, template, view, _i, _j, _k, _len, _len1, _len2, _ref1, _ref2, _results;
       modelName = this.args[0];
       collection = collection || [];
       if (this.iterated.length > collection.length) {
@@ -1148,18 +1313,10 @@
       }
       for (index = _j = 0, _len1 = collection.length; _j < _len1; index = ++_j) {
         model = collection[index];
-        data = {
-          index: index
-        };
+        data = Object.create(this.view.models);
+        data.index = index;
         data[modelName] = model;
         if (this.iterated[index] == null) {
-          _ref2 = this.view.models;
-          for (key in _ref2) {
-            model = _ref2[key];
-            if (data[key] == null) {
-              data[key] = model;
-            }
-          }
           previous = this.iterated.length ? this.iterated[this.iterated.length - 1].els[0] : this.marker;
           options = this.view.options();
           options.preloadData = true;
@@ -1173,10 +1330,10 @@
         }
       }
       if (el.nodeName === 'OPTION') {
-        _ref3 = this.view.bindings;
+        _ref2 = this.view.bindings;
         _results = [];
-        for (_k = 0, _len2 = _ref3.length; _k < _len2; _k++) {
-          binding = _ref3[_k];
+        for (_k = 0, _len2 = _ref2.length; _k < _len2; _k++) {
+          binding = _ref2[_k];
           if (binding.el === this.marker.parentNode && binding.type === 'value') {
             _results.push(binding.sync());
           } else {
@@ -1218,6 +1375,50 @@
       return el.setAttribute(this.type, value);
     } else {
       return el.removeAttribute(this.type);
+    }
+  };
+
+  Rivets["public"].binders.transclude = {
+    blockNameAttribute: 'block-name',
+    injectPart: function(partElement, existingElement) {
+      while (existingElement.firstChild) {
+        existingElement.removeChild(existingElement.firstChild);
+      }
+      return existingElement.appendChild(partElement);
+    },
+    bind: function(el, value) {
+      var binder, child, componentBinbing, content, part, partName, selector, _i, _len, _ref1;
+      binder = Rivets["public"].binders.transclude;
+      componentBinbing = this.view.models.component;
+      if (!componentBinbing) {
+        throw new Error('Unable to transclude content because used outside component.');
+      }
+      content = Rivets.Util.domData(componentBinbing.el, 'originalContent');
+      if (!content) {
+        return;
+      }
+      partName = value != null ? value : el.getAttribute([this.view.prefix, this.type].join('-'));
+      if (!partName) {
+        part = content;
+      } else {
+        selector = componentBinbing.component.transclude[partName] || ("[" + binder.blockNameAttribute + "=" + partName + "]");
+        _ref1 = content.children || content.childNodes;
+        for (_i = 0, _len = _ref1.length; _i < _len; _i++) {
+          child = _ref1[_i];
+          if (Rivets.Util.isElementMatch(child, selector)) {
+            part = child;
+            break;
+          }
+        }
+      }
+      if (part) {
+        binder.injectPart(part, el);
+        return this.partView = Rivets["public"].bind(Array.prototype.slice.call(el.childNodes, 0), this.view.models);
+      }
+    },
+    unbind: function() {
+      var _ref1;
+      return (_ref1 = this.partView) != null ? _ref1.unbind() : void 0;
     }
   };
 
