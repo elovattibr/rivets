@@ -11,6 +11,13 @@ describe('Component binding', function() {
     }
   })
 
+  it('allows to acccess own controller by name of the component', function() {
+    componentRoot.innerHTML = '{ test.name }'
+    rivets.bind(element)
+
+    componentRoot.innerHTML.should.equal(scope.name)
+  })
+
   it('renders "template" as a string', function() {
     rivets.components.test.template = '<h1>test</h1>'
     rivets.bind(element)
@@ -19,10 +26,26 @@ describe('Component binding', function() {
   })
 
   it('allows not to pass "template" method', function() {
-    componentRoot.innerHTML = '<b>{ name }</b>'
+    componentRoot.innerHTML = '<b>{ test.name }</b>'
     rivets.bind(element)
 
     componentRoot.innerHTML.should.equal('<b>' + scope.name + '</b>')
+  })
+
+  it('has access to parent model', function() {
+    var parent = { title: 'Test' }
+    componentRoot.innerHTML = '{ title }: { test.name }'
+    rivets.bind(element, parent)
+
+    componentRoot.innerHTML.should.equal(parent.title + ': ' + scope.name)
+  })
+
+  it('allows to access own controller via property specified in "as" option', function() {
+    component.as = 'component'
+    componentRoot.innerHTML = '{ component.name }'
+    rivets.bind(element)
+
+    componentRoot.innerHTML.should.equal(scope.name)
   })
 
   describe('initialize()', function() {
@@ -75,6 +98,25 @@ describe('Component binding', function() {
     })
   })
 
+  describe('bind()', function() {
+    it('receives element as first argument and controller as second', function() {
+      component.bind = sinon.spy()
+      rivets.bind(element)
+
+      component.bind.calledWith(componentRoot, scope).should.be.true
+    })
+
+    it('is called after template is rendered', function() {
+      component.template = '<b>test</b>'
+      component.bind = function(el) {
+        el.querySelector('b').setAttribute('data-exist', 'true')
+      }
+      rivets.bind(element)
+
+      componentRoot.querySelector('b').getAttribute('data-exist').should.equal('true')
+    })
+  })
+
   describe('when "template" is a function', function() {
     it('receives view scope as first argument', function() {
       component.template = sinon.spy()
@@ -84,7 +126,7 @@ describe('Component binding', function() {
     })
 
     it('renders returned string as component template', function() {
-      component.template = sinon.stub().returns('<h1>{ name }</h1>')
+      component.template = sinon.stub().returns('<h1>{ test.name }</h1>')
       rivets.bind(element)
 
       componentRoot.innerHTML.should.equal('<h1>' + scope.name + '</h1>')
@@ -94,7 +136,7 @@ describe('Component binding', function() {
       var fragment = document.createDocumentFragment()
       var title = document.createElement('h1')
 
-      title.innerHTML = '{ name }'
+      title.innerHTML = '{ test.name }'
       fragment.appendChild(title)
       component.template = sinon.stub().returns(fragment)
       rivets.bind(element)
@@ -107,7 +149,7 @@ describe('Component binding', function() {
     beforeEach(function() {
       component.transclude = true
       component.template = '<label>Field</label>: <span rv-transclude="">Value</span>'
-      componentRoot.innerHTML = '<b rv-text="title"></b>'
+      componentRoot.innerHTML = '<b rv-text="test.title"></b>'
       scope.title = 'Rivets transclusion!'
     })
 
@@ -164,7 +206,7 @@ describe('Component binding', function() {
     })
 
     it('replaces only specified part of component template', function() {
-      componentRoot.innerHTML = '<b block-name="label">{ label }</b>'
+      componentRoot.innerHTML = '<b block-name="label">{ test.label }</b>'
       rivets.bind(element)
       var compiledTemplate = component.template.replace('Field', '<b block-name="label">' + scope.label + '</b>')
 
@@ -172,7 +214,7 @@ describe('Component binding', function() {
     })
 
     it('looks for blocks only inside direct children', function() {
-      componentRoot.innerHTML = '<b block-name="value">{ value }</b><another-one><b block-name="label">{ label }</b></another-one>'
+      componentRoot.innerHTML = '<b block-name="value">{ test.value }</b><another-one><b block-name="label">{ test.label }</b></another-one>'
       rivets.bind(element)
       var compiledTemplate = component.template.replace('Value', '<b block-name="value">' + scope.value + '</b>')
 
@@ -181,7 +223,7 @@ describe('Component binding', function() {
 
     it('searches block by specified alias in "transclusion" option', function() {
       component.transclude = { value: 'value' }
-      componentRoot.innerHTML = '<value>{ value }</value>'
+      componentRoot.innerHTML = '<value>{ test.value }</value>'
       rivets.bind(element)
       var compiledTemplate = component.template.replace('Value', '<value>' + scope.value + '</value>')
 

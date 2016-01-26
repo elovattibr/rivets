@@ -1,6 +1,6 @@
 Components let you define reusable views that can be used within any of your templates. For some perspective on where components fit into your templates in relation to binders; binders define custom attributes, while components define custom elements.
 
-A component object can define a `template` function, which returns the template for the component (this can be an HTML string or the actual element or even document fragment). It must also define an `initialize` function, which returns the scope object to bind the view with (this will likely be a controller / viewmodel / presenter).
+A component object can define a `template` function, which returns the template for the component (this can be an HTML string or the actual element or even document fragment). It must also define an `initialize` function, which returns the component controller (this will likely be a controller / viewmodel / presenter). Controller is accessible inside template by component's name or by custom name specified in `as` option.
 
 ```javascript
 rivets.components['todo-item'] = {
@@ -89,8 +89,8 @@ rivets.components.pane = {
 
   template: `
     <div class="panel">
-      <div rv-transclude="title" class="panel-heading">{ title }</div>
-      <div rv-transclude="body" class="panel-body">{ body }</div>
+      <div rv-transclude="title" class="panel-heading">{ pane.title }</div>
+      <div rv-transclude="body" class="panel-body">{ pane.body }</div>
     </div>
   `
 
@@ -102,7 +102,7 @@ Then lets specify custom heading for our `pane` component:
 
 ```html
 <pane>
-  <h3 block-name="title"><i class="glyphicon-ok"></i> { title }</h3>
+  <h3 block-name="title"><i class="glyphicon-ok"></i> { pane.title }</h3>
 </pane>
 ```
 
@@ -125,7 +125,7 @@ rivets.components.pane = {
 
 ```html
 <pane>
-  <pane-title><i class="glyphicon-ok"></i> { title }</pane-title>
+  <pane-title><i class="glyphicon-ok"></i> { pane.title }</pane-title>
 </pane>
 ```
 
@@ -137,6 +137,19 @@ rivets.binders.transclude.injectPart = function(partElement, existingElement) {
 }
 ```
 
+All models are passed through prototype chain, so any parent variable can be accessed inside component template. For example
+
+```js
+rivets.bind(document.body, { names: ['John', 'Albert', 'Sergii'] })
+```
+
+```html
+<tabset>
+  <tab rv-each-name="names" title="name">
+    <h3>Information about { name }</h3>
+  </tab>
+</tabset>
+```
 
 Components can also be initialized on their own, outside of a template. This is useful when you want to insert a new view into the DOM yourself, such as the entry point to your entire application or the content of a modal. The API is similar to `rivets.bind`, except that instead of passing it an actual template / element, you just pass it the name of the component and the root element you want the component to render in.
 

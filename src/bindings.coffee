@@ -252,13 +252,12 @@ class Rivets.ComponentBinding extends Rivets.Binding
     if @componentView?
       @componentView.bind()
     else
-      scope = @component.initialize.call @, @el, @locals(), @deps()
-      if @component.template
-        scope.component = @
-        @renderTemplate(scope)
+      ctrl = @component.initialize.call @, @el, @locals(), @deps()
+      @renderTemplate(ctrl) if @component.template
+      @component.bind.call(@, @el, ctrl) if typeof @component.bind is 'function'
 
       Rivets.Util.domData(@el, 'isBound', true)
-      Rivets.Util.domData(@el, "#{@type}Component", scope)
+      Rivets.Util.domData(@el, "#{@type}Component", ctrl)
       options = {}
 
       for option in Rivets.extensions
@@ -269,7 +268,7 @@ class Rivets.ComponentBinding extends Rivets.Binding
       for option in Rivets.options
         options[option] = @component[option] ? @view[option]
 
-      @componentView = new Rivets.View(@el, scope, options)
+      @componentView = new Rivets.View(@el, @createViewFor(ctrl), options)
       @componentView.bind()
       Rivets.Util.domData(@el, 'originalContent', null) if Rivets.Util.domData(@el, 'originalContent')
 
@@ -279,9 +278,9 @@ class Rivets.ComponentBinding extends Rivets.Binding
         ).call(@, key, observer)
 
   # Render component template despite of whether it's string or DOM node
-  renderTemplate: (scope) =>
-    if typeof @component.template is "function"
-      template = @component.template.call @, scope
+  renderTemplate: (ctrl) =>
+    if typeof @component.template is 'function'
+      template = @component.template.call @, ctrl
     else
       template = @component.template
 
@@ -299,6 +298,12 @@ class Rivets.ComponentBinding extends Rivets.Binding
     fragment = document.createDocumentFragment()
     fragment.appendChild(clone.firstChild) while(clone.firstChild)
     fragment
+
+  createViewFor: (ctrl) =>
+    viewScope = Object.create(@view.models)
+    viewScope.component = @
+    viewScope[@component.as || @camelCase(@type)] = ctrl
+    viewScope
 
   # Intercept `Rivets.Binding::unbind` to be called on `@componentView`.
   unbind: =>
