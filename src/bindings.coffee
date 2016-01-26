@@ -184,12 +184,20 @@ class Rivets.ComponentBinding extends Rivets.Binding
 
     for attribute in @el.attributes or []
       unless bindingRegExp.test attribute.name
-        propertyName = @camelCase attribute.name
+        propertyName = attribute.name
+        isBoundAttr = @isAttrBound(propertyName)
+        propertyName = propertyName.slice(0, -@view.boundAttrSuffix.length) if isBoundAttr
+        propertyName = @camelCase(propertyName)
 
-        if propertyName in (@component.static ? [])
-          @static[propertyName] = attribute.value
-        else
+        if isBoundAttr
           @observers[propertyName] = attribute.value
+        else
+          @static[propertyName] = attribute.value
+
+  isAttrBound: (name) ->
+    position = name.indexOf(@view.boundAttrSuffix)
+    return false if position is -1
+    name.indexOf(@view.boundAttrSuffix) is name.length - @view.boundAttrSuffix.length
 
   # Intercepts `Rivets.Binding::sync` since component bindings are not bound to
   # a particular model to update it's value.

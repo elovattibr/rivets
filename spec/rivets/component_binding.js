@@ -53,23 +53,39 @@ describe('Component binding', function() {
 
     beforeEach(function() {
       locals = { object: { name: 'Rivets locals' } }
+    })
+
+    it('receives element as first argument', function() {
+      rivets.bind(element, locals)
+
+      component.initialize.calledWith(componentRoot).should.be.true
+    })
+
+    it('receives element attributes as second argument', function() {
       componentRoot.setAttribute('item', 'object')
+      rivets.bind(element)
+
+      component.initialize.calledWith(componentRoot, { item: 'object' }).should.be.true
     })
 
-    it('receives element as first argument and attributes as second', function() {
-      rivets.bind(element, locals)
+    describe('when has attributes', function() {
+      beforeEach(function() {
+        locals.name = 'John'
+      })
 
-      component.initialize.calledWith(componentRoot, { item: locals.object }).should.be.true
-    })
+      it('parses value of attributes which name ends with ".bind"', function() {
+        componentRoot.setAttribute('name.bind', 'name')
+        rivets.bind(element, locals)
 
-    it('returns attributes assigned to "static" property as they are', function() {
-      var type = 'text'
+        component.initialize.calledWith(componentRoot, { name: 'John' }).should.be.true
+      })
 
-      component.static = ['type']
-      componentRoot.setAttribute('type', type)
-      rivets.bind(element, locals)
+      it('passes value of attributes as it is', function() {
+        componentRoot.setAttribute('type', 'text')
+        rivets.bind(element)
 
-      component.initialize.calledWith(componentRoot, { item: locals.object, type: type }).should.be.true
+        component.initialize.calledWith(componentRoot, { type: 'text' }).should.be.true
+      })
     })
 
     describe('when "requires" option is specified for component', function() {
