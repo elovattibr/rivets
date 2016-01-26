@@ -2,6 +2,7 @@
 Rivets =
   options: [
     'prefix'
+    'boundAttrSuffix'
     'templateDelimiters'
     'rootInterface'
     'preloadData'
@@ -31,6 +32,8 @@ Rivets =
 
     # Default attribute prefix.
     prefix: 'rv'
+
+    boundAttrSuffix: '.bind'
 
     # Default template delimiters.
     templateDelimiters: ['{', '}']

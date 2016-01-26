@@ -20,10 +20,16 @@ rivets.components['todo-item'] = {
 }
 ```
 
-To use the component inside of a template, simply use an element with the same tag name as the component's key. All attributes on the element will get evaluated as keypaths before being passed into the component's `initialize` function.
+To use the component inside of a template, simply use an element with the same tag name as the component's key. All attributes on the element will be passed as they are. In the example above `data` object inside `initialize` method will be `{ item: 'myItem' }`
 
 ```html
 <todo-item item="myItem"></todo-item>
+```
+
+In order to evaluate attribute's value as keypath, you need to suffix attribute name with `.bind`
+
+```html
+<todo-item item.bind="myItem"></todo-item>
 ```
 
 These keypaths will also be observed in both directions so that the component will update if the value changes from the outside and it will set the value if the component changes it from the inside.
@@ -45,8 +51,6 @@ By the way `template` method accepts created (inside `initialize` method) contro
 
 ```js
 rivets.components['form-field'] = {
-  static: ['type'],
-
   template: function(formField) {
     return JST['form-fields/' + formField.type]
   },
