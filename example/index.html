@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="css/foundation.css"  media="screen" />
+  <link rel="stylesheet" href="src/lib/foundation/tabset/tabset.css" media="screen" />
+</head>
+
+<body style="padding: 30px;">
+  Notifications: <pre rv-text="user.config.notifications">User: { user | json }</pre>
+  <tabset>
+    <tab title="Progress">
+      <h3>{ tab.title }</h3>
+
+      <progressbar progress="65"></progressbar>
+      <progressbar progress="35"></progressbar>
+    </tab>
+    <tab title="Settings">
+      <h3>{ tab.title }</h3>
+      <div class="row">
+        <div class="medium-4 columns text-center">
+          <p>Auto Brightness</p>
+          <switch-button checked="user.config.autoBrightness"></switch-button>
+          <p>Voice Control</p>
+          <switch-button></switch-button>
+          <p>Time</p>
+          <switch-button></switch-button>
+        </div>
+        <div class="medium-4 columns text-center">
+          <p>Notifications</p>
+          <switch-button checked="user.config.notifications"></switch-button>
+          <p>Air Drop</p>
+          <switch-button></switch-button>
+          <p>Air Play</p>
+          <switch-button></switch-button>
+        </div>
+        <div class="medium-4 columns text-center">
+          <p>Data Roaming</p>
+          <switch-button checked="user.config.dataRoaming"></switch-button>
+          <p>Volume Override</p>
+          <switch-button></switch-button>
+          <p>Bluetooth</p>
+          <switch-button></switch-button>
+        </div>
+      </div>
+    </tab>
+  </tabset>
+
+  <script src="src/vendor/rivets.bundled.min.js"></script>
+  <script src="src/lib/formatters/json.js"></script>
+  <script src="src/lib/formatters/eq.js"></script>
+  <script src="src/lib/foundation/tabset/tabset.js"></script>
+  <script src="src/lib/foundation/tabset/tab.js"></script>
+  <script src="src/lib/foundation/progressbar/progressbar.js"></script>
+  <script src="src/lib/foundation/switch/switch.js"></script>
+  <script src="src/boot.js"></script>
+</body>
+
+</html>
