@@ -22,7 +22,7 @@
       <div class="row">
         <div class="medium-4 columns text-center">
           <p>Auto Brightness</p>
-          <switch-button checked="user.config.autoBrightness"></switch-button>
+          <switch-button checked.bind="user.config.autoBrightness"></switch-button>
           <p>Voice Control</p>
           <switch-button></switch-button>
           <p>Time</p>
@@ -30,7 +30,7 @@
         </div>
         <div class="medium-4 columns text-center">
           <p>Notifications</p>
-          <switch-button checked="user.config.notifications"></switch-button>
+          <switch-button checked.bind="user.config.notifications"></switch-button>
           <p>Air Drop</p>
           <switch-button></switch-button>
           <p>Air Play</p>
@@ -38,7 +38,7 @@
         </div>
         <div class="medium-4 columns text-center">
           <p>Data Roaming</p>
-          <switch-button checked="user.config.dataRoaming"></switch-button>
+          <switch-button checked.bind="user.config.dataRoaming"></switch-button>
           <p>Volume Override</p>
           <switch-button></switch-button>
           <p>Bluetooth</p>
