@@ -1217,8 +1217,8 @@
       if (!!value === !this.bound) {
         if (value) {
           models = Object.create(this.view.models);
-          (this.nested || (this.nested = new Rivets.View(el, models, this.view.options()))).bind();
           this.marker.parentNode.insertBefore(el, this.marker.nextSibling);
+          (this.nested || (this.nested = new Rivets.View(el, models, this.view.options()))).bind();
           return this.bound = true;
         } else {
           el.parentNode.removeChild(el);
@@ -1321,10 +1321,10 @@
           options = this.view.options();
           options.preloadData = true;
           template = el.cloneNode(true);
+          this.marker.parentNode.insertBefore(template, previous.nextSibling);
           view = new Rivets.View(template, data, options);
           view.bind();
           this.iterated.push(view);
-          this.marker.parentNode.insertBefore(template, previous.nextSibling);
         } else if (this.iterated[index].models[modelName] !== model) {
           this.iterated[index].update(data);
         }

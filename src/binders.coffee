@@ -118,8 +118,8 @@ Rivets.public.binders.if =
       if value
         models = Object.create(@view.models)
 
-        (@nested or= new Rivets.View(el, models, @view.options())).bind()
         @marker.parentNode.insertBefore el, @marker.nextSibling
+        (@nested or= new Rivets.View(el, models, @view.options())).bind()
         @bound = true
       else
         el.parentNode.removeChild el
@@ -206,11 +206,10 @@ Rivets.public.binders['each-*'] =
         options.preloadData = true
 
         template = el.cloneNode true
+        @marker.parentNode.insertBefore template, previous.nextSibling
         view = new Rivets.View(template, data, options)
         view.bind()
         @iterated.push view
-
-        @marker.parentNode.insertBefore template, previous.nextSibling
       else if @iterated[index].models[modelName] isnt model
         @iterated[index].update data
 
