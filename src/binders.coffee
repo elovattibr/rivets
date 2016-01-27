@@ -116,8 +116,7 @@ Rivets.public.binders.if =
   routine: (el, value) ->
     if !!value is not @bound
       if value
-        models = {}
-        models[key] = model for key, model of @view.models
+        models = Object.create(@view.models)
 
         (@nested or= new Rivets.View(el, models, @view.options())).bind()
         @marker.parentNode.insertBefore el, @marker.nextSibling
@@ -193,13 +192,11 @@ Rivets.public.binders['each-*'] =
         @marker.parentNode.removeChild view.els[0]
 
     for model, index in collection
-      data = {index}
+      data = Object.create(@view.models)
+      data.index = index
       data[modelName] = model
 
       if not @iterated[index]?
-        for key, model of @view.models
-          data[key] ?= model
-
         previous = if @iterated.length
           @iterated[@iterated.length - 1].els[0]
         else
