@@ -222,7 +222,7 @@ class Rivets.ComponentBinding extends Rivets.Binding
     unless @bound
       for key, keypath of @observers
         @observers[key] = @observe @view.models, keypath, ((key) => =>
-          @componentView.models[key] = @observers[key].value()
+          @controller[key] = @observers[key].value()
         ).call(@, key)
 
       @bound = true
@@ -231,7 +231,7 @@ class Rivets.ComponentBinding extends Rivets.Binding
       @componentView.bind()
     else
       @el.innerHTML = @component.template.call this
-      scope = @component.initialize.call @, @el, @locals()
+      scope = @createScope()
       @el._bound = true
 
       options = {}
@@ -248,10 +248,19 @@ class Rivets.ComponentBinding extends Rivets.Binding
       @componentView.bind()
 
       for key, observer of @observers
-        @upstreamObservers[key] = @observe @componentView.models, key, ((key, observer) => =>
-          observer.setValue @componentView.models[key]
+        @upstreamObservers[key] = @observe @controller, key, ((key, observer) => =>
+          observer.setValue @controller[key]
         ).call(@, key, observer)
     return
+
+  createScope: =>
+    if typeof @component.controller is 'function'
+      scope = {}
+      @controller = @component.controller.call @, @locals()
+      scope[@component.as or @camelCase(@type)] = @controller
+      scope
+    else
+      @controller = @component.initialize.call @, @el, @locals()
 
   # Intercept `Rivets.Binding::unbind` to be called on `@componentView`.
   unbind: =>
