@@ -32,30 +32,27 @@ describe("Rivets.binders", function() {
   })
 
   describe("each-*", function() {
-    var fragment;
-    var el;
-    var model;
+    var fragment, el, model, view;
 
     beforeEach(function() {
       fragment = document.createDocumentFragment();
       el = document.createElement("li");
       el.setAttribute("rv-each-item", "items");
       el.setAttribute("rv-text", "item.val");
+      el.setAttribute("rv-index", "index");
 
       fragment.appendChild(el);
 
       model = { items: [{val: 0},{val: 1},{val: 2}] };
+      view = rivets.bind(fragment, model);
     });
 
     it("binds to the model creating a list item for each element in items", function() {
-      var view = rivets.bind(fragment, model);
-
       // one child for each element in the model plus 1 for the comment placeholder
       Should(fragment.childNodes.length).be.exactly(model.items.length + 1);
     });
 
     it("reflects changes to the model into the DOM", function() {
-      var view = rivets.bind(fragment, model);
       Should(fragment.childNodes[1].textContent).be.exactly("0");
 
       model.items[0].val = "howdy";
@@ -63,7 +60,6 @@ describe("Rivets.binders", function() {
     });
 
     it("reflects changes to the model into the DOM after unbind/bind", function() {
-      var view = rivets.bind(fragment, model);
       Should(fragment.childNodes[1].textContent).be.exactly("0");
 
       view.unbind();
@@ -73,7 +69,6 @@ describe("Rivets.binders", function() {
     });
 
     it("lets you push an item", function() {
-      var view = rivets.bind(fragment, model);
       var originalLength  = model.items.length;
 
       // one child for each element in the model plus 1 for the comment placeholder
@@ -85,7 +80,6 @@ describe("Rivets.binders", function() {
     });
 
     it("lets you push an item after unbind/bind", function() {
-      var view = rivets.bind(fragment, model);
       var originalLength  = model.items.length;
 
       // one child for each element in the model plus 1 for the comment placeholder
@@ -97,6 +91,28 @@ describe("Rivets.binders", function() {
       model.items.push({val: 3});
       Should(model.items.length).be.exactly(originalLength + 1);
       Should(fragment.childNodes.length).be.exactly(model.items.length + 1);
+    });
+
+    it("removes related view when an item is removed", function() {
+      fragment.childNodes[2].id = 'second';
+      model.items.splice(1, 1);
+
+      fragment.childNodes.should.have.length(model.items.length + 1);
+      fragment.childNodes[2].id.should.be.empty;
+    });
+
+    it("updates index of all other views when an item is removed", function() {
+      model.items.shift();
+
+      var nodeIds = Array.prototype.slice.call(fragment.childNodes, 1).map(function(element) {
+        return element.getAttribute('index') + '-' + element.textContent;
+      });
+
+      var itemIds = model.items.map(function(model, index) {
+        return index + '-' + model.val;
+      });
+
+      nodeIds.should.eql(itemIds);
     });
   });
 
@@ -200,7 +216,7 @@ describe("Rivets.binders", function() {
       Should(fragment.childNodes.length).be.exactly(1);
     });
   });
- 
+
   describe("Custom binder with no attribute value", function() {
     rivets.binders["custom-binder"] = function(el, value) {
       el.innerHTML = "received " + value;

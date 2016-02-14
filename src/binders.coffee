@@ -188,36 +188,44 @@ Rivets.public.binders['each-*'] =
     collection = collection or []
 
     if @iterated.length > collection.length
-      for i in Array @iterated.length - collection.length
-        view = @iterated.pop()
-        view.unbind()
-        @marker.parentNode.removeChild view.els[0]
+      existingViews = []
+      @iterated.forEach (view, index) =>
+        if collection.indexOf(view.models[modelName]) is -1
+          view.unbind()
+          return @marker.parentNode.removeChild view.els[0]
 
-    for model, index in collection
-      data = {index}
-      data[Rivets.public.iterationAlias modelName] = index
-      data[modelName] = model
+        model = collection[existingViews.length]
+        if view.models[modelName] isnt model or index isnt existingViews.length
+          data = { index: existingViews.length }
+          data[Rivets.public.iterationAlias modelName] = data.index
+          data[modelName] = model
+          view.update data
+        existingViews.push(view)
+      @iterated = existingViews
+      return
 
-      if not @iterated[index]?
-        for key, model of @view.models
-          data[key] ?= model
+    while @iterated.length < collection.length
+      data = { index: @iterated.length }
+      data[Rivets.public.iterationAlias modelName] = data.index
+      model = data[modelName] = collection[data.index]
 
-        previous = if @iterated.length
-          @iterated[@iterated.length - 1].els[0]
-        else
-          @marker
+      for key, model of @view.models
+        data[key] ?= model
 
-        options = @view.options()
-        options.preloadData = true
+      previous = if @iterated.length
+        @iterated[@iterated.length - 1].els[0]
+      else
+        @marker
 
-        template = el.cloneNode true
-        view = new Rivets.View(template, data, options)
-        view.bind()
-        @iterated.push view
+      options = @view.options()
+      options.preloadData = true
 
-        @marker.parentNode.insertBefore template, previous.nextSibling
-      else if @iterated[index].models[modelName] isnt model
-        @iterated[index].update data
+      template = el.cloneNode true
+      view = new Rivets.View(template, data, options)
+      view.bind()
+      @iterated.push view
+
+      @marker.parentNode.insertBefore template, previous.nextSibling
 
     if el.nodeName is 'OPTION'
       for binding in @view.bindings
